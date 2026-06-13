@@ -29,13 +29,19 @@ class ChainlitRenderer(BaseRenderer):
             await self._current_step.__aexit__(None, None, None)
             self._current_step = None
 
+    async def on_answer_start(self) -> None:
+        # Discard any in-progress message from a failed citation attempt
+        if self._answer_msg:
+            await self._answer_msg.remove()
+        self._answer_msg = None
+
     async def on_text_chunk(self, chunk: str) -> None:
         if self._answer_msg is None:
             self._answer_msg = cl.Message(content="")
             await self._answer_msg.send()
         await self._answer_msg.stream_token(chunk)
 
-    async def on_done(self, full_text: str) -> None:
+    async def on_done(self, _full_text: str) -> None:
         if self._answer_msg:
             await self._answer_msg.update()
         self._answer_msg = None

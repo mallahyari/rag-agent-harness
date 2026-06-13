@@ -38,6 +38,7 @@ async def run(
         full_text = ""
         tool_calls: dict[str, dict] = {}  # tool_id → {name, input}
         last_tid: str | None = None
+        answer_started = False
 
         async for chunk in stream:
             choice = chunk.choices[0]
@@ -49,6 +50,9 @@ async def run(
 
             # Streaming text
             if delta.content:
+                if not answer_started:
+                    await renderer.on_answer_start()
+                    answer_started = True
                 full_text += delta.content
                 await renderer.on_text_chunk(delta.content)
 

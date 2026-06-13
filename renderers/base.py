@@ -21,6 +21,10 @@ class BaseRenderer(ABC):
         """Called after the tool executes and returns a result."""
 
     @abstractmethod
+    async def on_answer_start(self) -> None:
+        """Called just before text chunks begin streaming for a new answer attempt."""
+
+    @abstractmethod
     async def on_text_chunk(self, chunk: str) -> None:
         """Called for each streamed text token in the final answer."""
 
