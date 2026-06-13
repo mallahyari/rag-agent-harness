@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
@@ -19,6 +19,7 @@ _THEME = Theme({
     "tool.err":    "bold red",
     "thinking":    "italic dim yellow",
     "rule.answer": "bold blue",
+    "stream.text": "white",
 })
 
 _TOOL_ICONS = {
@@ -28,21 +29,18 @@ _TOOL_ICONS = {
     "think":             "💭",
 }
 
-# Update the live display every N characters to avoid excessive redraws
-_REFRESH_EVERY = 20
+_MD_PATTERN = re.compile(r"(\*\*|#{1,3} |^\s*[-*] |\`)", re.MULTILINE)
+
+
+def _has_markdown(text: str) -> bool:
+    return bool(_MD_PATTERN.search(text))
 
 
 class TerminalRenderer(BaseRenderer):
     def __init__(self) -> None:
         self.console = Console(theme=_THEME, highlight=False)
         self._full_text = ""
-        self._live: Live | None = None
-        self._chars_since_refresh = 0
-
-    def _stop_live(self) -> None:
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
+        self._answer_header_shown = False
 
     async def on_thinking(self, text: str) -> None:
         self.console.print(Panel(
@@ -66,48 +64,41 @@ class TerminalRenderer(BaseRenderer):
             self.console.print()
 
     async def on_tool_result(self, name: str, result: str, is_error: bool) -> None:
-        if is_error:
-            title = f"[tool.err]✗ {name}[/tool.err]"
-            border = "red"
-        else:
-            title = f"[tool.ok]✓ {name}[/tool.ok]"
-            border = "green"
-
+        style  = "tool.err" if is_error else "tool.ok"
+        icon   = "✗" if is_error else "✓"
+        border = "red" if is_error else "green"
         preview = result[:800] + ("…" if len(result) > 800 else "")
         self.console.print(Panel(
             Text(preview),
-            title=title,
+            title=f"[{style}]{icon} {name}[/{style}]",
             border_style=border,
             padding=(0, 1),
         ))
 
     async def on_answer_start(self) -> None:
-        self._stop_live()
+        if not self._answer_header_shown:
+            self.console.print()
+            self.console.print(Rule("[rule.answer]Answer[/rule.answer]", style="blue"))
+            self.console.print()
+            self._answer_header_shown = True
+        else:
+            # Retry after citation failure — show a subtle separator
+            self.console.print("\n[dim]  ↻ revising…[/dim]\n")
         self._full_text = ""
-        self._chars_since_refresh = 0
-        self.console.print()
-        self.console.print(Rule("[rule.answer]Answer[/rule.answer]", style="blue"))
-        self.console.print()
-        self._live = Live(
-            Markdown(""),
-            console=self.console,
-            refresh_per_second=12,
-            vertical_overflow="visible",
-        )
-        self._live.start()
 
     async def on_text_chunk(self, chunk: str) -> None:
         self._full_text += chunk
-        self._chars_since_refresh += len(chunk)
-        if self._live and self._chars_since_refresh >= _REFRESH_EVERY:
-            self._live.update(Markdown(self._full_text))
-            self._chars_since_refresh = 0
+        # Stream each token immediately — plain text, no redraws, no flicker
+        self.console.print(chunk, end="", markup=False, highlight=False)
 
     async def on_done(self, _full_text: str) -> None:
-        if self._live:
-            # Final render with complete text
-            self._live.update(Markdown(self._full_text))
-            self._stop_live()
-            self.console.print()
+        if self._full_text:
+            self.console.print("\n")
+            # If the answer contains Markdown syntax, reprint it formatted
+            if _has_markdown(self._full_text):
+                self.console.print(Rule("[dim]↑ plain  ·  formatted ↓[/dim]", style="dim"))
+                self.console.print()
+                self.console.print(Markdown(self._full_text))
+                self.console.print()
         self._full_text = ""
-        self._chars_since_refresh = 0
+        self._answer_header_shown = False

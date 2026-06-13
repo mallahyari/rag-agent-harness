@@ -40,13 +40,27 @@ def post_hook(tool_name: str, result: str, is_error: bool, state: SessionState) 
     return result
 
 
+_NO_INFO_PHRASES = (
+    "cannot find", "can't find", "not found", "no information",
+    "not present", "not available", "unable to find", "not in the",
+    "not contain", "does not contain", "no results",
+)
+
+
 def validate_citation(answer: str, retrieved_ids: set[str]) -> str | None:
     cited = set(re.findall(r'\[([^\]]+)\]', answer))
+
+    # If the model explicitly says it couldn't find info, no citations required
     if not cited:
+        lower = answer.lower()
+        if any(p in lower for p in _NO_INFO_PHRASES) or not retrieved_ids:
+            return None
         return (
             "Your answer has no citations. Add [chunk_id] references "
             "for each factual claim using the IDs from search results."
         )
+
+    # Only reject hallucinated IDs — ones not in any retrieved result
     unknown = cited - retrieved_ids
     if unknown:
         return (
