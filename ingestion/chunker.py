@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,11 +16,24 @@ class RawChunk:
 
 
 def _doc_id(path: str) -> str:
-    return Path(path).stem
+    # Sanitize filename into a safe ID (strip spaces and special chars)
+    stem = Path(path).stem
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", stem)[:80]
 
 
 def _chunk_id(doc_id: str, index: int) -> str:
     return f"{doc_id}__c{index:04d}"
+
+
+def _read_pdf(path: str) -> str:
+    from liteparse import LiteParse
+    parser = LiteParse()
+    result = parser.parse(path)
+    return result.text
+
+
+def _read_text(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8", errors="replace")
 
 
 def chunk_text(
@@ -54,7 +67,10 @@ def chunk_file(
     chunk_overlap: int = 64,
 ) -> list[RawChunk]:
     p = Path(path)
-    text = p.read_text(encoding="utf-8", errors="replace")
+    if p.suffix.lower() == ".pdf":
+        text = _read_pdf(path)
+    else:
+        text = _read_text(path)
     doc_id = _doc_id(path)
     return chunk_text(text, doc_id, collection, chunk_size, chunk_overlap)
 
@@ -62,7 +78,7 @@ def chunk_file(
 def chunk_directory(
     directory: str,
     collection: str,
-    glob: str = "**/*.txt",
+    glob: str = "**/*.pdf",
     chunk_size: int = 512,
     chunk_overlap: int = 64,
 ) -> list[RawChunk]:

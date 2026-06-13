@@ -23,3 +23,5 @@ corpus.lance/
 # Misc
 hello.py
 uv.lock
+.DS_Store
+pdfs/

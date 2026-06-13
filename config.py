@@ -13,7 +13,7 @@ from harness.providers import PROVIDERS, ProviderConfig
 @dataclass
 class Config:
     # LLM
-    provider: str = "anthropic-fast"
+    provider: str = "gemini-fast"
 
     # Retrieval
     search_k: int = 10

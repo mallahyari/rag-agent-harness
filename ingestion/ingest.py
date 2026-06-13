@@ -14,7 +14,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest documents into the RAG corpus")
     parser.add_argument("--path", required=True, help="File or directory to ingest")
     parser.add_argument("--collection", default="default", help="Collection name")
-    parser.add_argument("--glob", default="**/*.txt", help="Glob pattern for directories")
+    parser.add_argument("--glob", default="**/*.pdf", help="Glob pattern for directories")
     parser.add_argument("--chunk-size", type=int, default=512)
     parser.add_argument("--chunk-overlap", type=int, default=64)
     args = parser.parse_args()

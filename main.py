@@ -41,13 +41,13 @@ async def main() -> None:
     parser.add_argument("question", nargs="?", help="Question to ask (omit for REPL)")
     parser.add_argument(
         "--provider",
-        default="anthropic-fast",
+        default=None,
         choices=list(PROVIDERS.keys()),
-        help="LLM provider key",
+        help="LLM provider key (default: from Config)",
     )
     args = parser.parse_args()
 
-    config = Config(provider=args.provider)
+    config = Config(provider=args.provider) if args.provider else Config()
     db = get_db(config.lance_db_path)
     init_tools(db, config)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from .hooks import ContextBudgetExceeded, post_hook, pre_hook, validate_citation
 from .providers import ProviderConfig, stream_completion
@@ -9,6 +10,12 @@ from .tools import TOOL_SCHEMAS, dispatch_tool
 from renderers.base import BaseRenderer
 
 MAX_ITERATIONS = 10
+
+
+def _clean_tool_id(tid: str) -> str:
+    # Gemini thinking mode appends '__thought__<base64>' to tool call IDs.
+    # Strip it so history round-trips cleanly.
+    return re.split(r"__thought__", tid, maxsplit=1)[0]
 
 
 async def run(
@@ -49,7 +56,7 @@ async def run(
             if delta.tool_calls:
                 for tc in delta.tool_calls:
                     if tc.id:
-                        last_tid = tc.id
+                        last_tid = _clean_tool_id(tc.id)
                         tool_calls[last_tid] = {
                             "name": tc.function.name or "",
                             "input": "",
@@ -58,11 +65,11 @@ async def run(
                             tc.function.name or "", last_tid
                         )
                     elif last_tid:
-                        # continuation of current tool call
-                        pass
+                        pass  # continuation of current tool call
 
                     # Accumulate argument JSON fragment
-                    tid = tc.id or last_tid
+                    raw_tid = tc.id or (last_tid or "")
+                    tid = _clean_tool_id(raw_tid) if raw_tid else last_tid
                     if tid and tc.function and tc.function.arguments:
                         tool_calls[tid]["input"] += tc.function.arguments
                         if tc.function.name and not tool_calls[tid]["name"]:
@@ -80,32 +87,36 @@ async def run(
             return full_text
 
         if finish_reason == "tool_calls" or tool_calls:
-            assistant_content: list[dict] = []
-            if full_text:
-                assistant_content.append({"type": "text", "text": full_text})
-
+            # Parse all inputs first
+            parsed: dict[str, dict] = {}
             for tid, tc in tool_calls.items():
                 try:
-                    inputs = json.loads(tc["input"] or "{}")
+                    parsed[tid] = json.loads(tc["input"] or "{}")
                 except json.JSONDecodeError:
-                    inputs = {}
-                await renderer.on_tool_call_end(tid, inputs)
-                assistant_content.append({
-                    "type": "tool_use",
-                    "id": tid,
-                    "name": tc["name"],
-                    "input": inputs,
-                })
+                    parsed[tid] = {}
+                await renderer.on_tool_call_end(tid, parsed[tid])
 
-            state.history.append({"role": "assistant", "content": assistant_content})
+            # Store in OpenAI tool_calls format — works across all LiteLLM providers
+            assistant_msg: dict = {
+                "role": "assistant",
+                "content": full_text or None,
+                "tool_calls": [
+                    {
+                        "id": tid,
+                        "type": "function",
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": json.dumps(parsed[tid]),
+                        },
+                    }
+                    for tid, tc in tool_calls.items()
+                ],
+            }
+            state.history.append(assistant_msg)
 
             tool_results: list[dict] = []
             for tid, tc in tool_calls.items():
-                try:
-                    inputs = json.loads(tc["input"] or "{}")
-                except json.JSONDecodeError:
-                    inputs = {}
-
+                inputs = parsed[tid]
                 try:
                     args = pre_hook(tc["name"], inputs, state)
                     result, is_error = dispatch_tool(tc["name"], args)

@@ -33,6 +33,9 @@ def post_hook(tool_name: str, result: str, is_error: bool, state: SessionState) 
 
     if tool_name == "get_context" and not is_error:
         state.retrieved_token_count += len(result) // 4
+        # Track chunk IDs returned by get_context so citation validator accepts them
+        ids = re.findall(r'\[([^\]]+)\]', result)
+        state.retrieved_chunk_ids.update(ids)
 
     return result
 

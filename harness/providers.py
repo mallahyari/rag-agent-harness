@@ -21,7 +21,7 @@ PROVIDERS: dict[str, ProviderConfig] = {
     "anthropic-smart": ProviderConfig(model="claude-sonnet-4-6", enable_thinking=True),
     "openai-fast":     ProviderConfig(model="gpt-4o-mini"),
     "openai-smart":    ProviderConfig(model="gpt-4o"),
-    "gemini-fast":     ProviderConfig(model="gemini/gemini-2.0-flash"),
+    "gemini-fast":     ProviderConfig(model="gemini/gemini-2.5-flash"),
     "gemini-smart":    ProviderConfig(model="gemini/gemini-2.5-pro"),
 }
 
