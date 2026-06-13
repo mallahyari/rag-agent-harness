@@ -59,14 +59,18 @@ async def main() -> None:
     else:
         from rich.console import Console
         console = Console()
-        console.print("[bold blue]RAG Agent[/bold blue]  (Ctrl+C to exit)\n")
+        console.print("[bold blue]RAG Agent[/bold blue]  (type [bold]/exit[/bold] or Ctrl+C to quit)\n")
         while True:
             try:
                 question = input("You: ").strip()
-                if question:
-                    await run(
-                        question, renderer, config.provider_config, SYSTEM_PROMPT, state
-                    )
+                if not question:
+                    continue
+                if question.lower() in ("/exit", "/quit"):
+                    console.print("[dim]Bye.[/dim]")
+                    break
+                await run(
+                    question, renderer, config.provider_config, SYSTEM_PROMPT, state
+                )
             except (KeyboardInterrupt, EOFError):
                 console.print("\n[dim]Bye.[/dim]")
                 break
