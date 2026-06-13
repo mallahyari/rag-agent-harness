@@ -1,0 +1,41 @@
+Climate Policy Brief — Carbon Markets Update (2025)
+
+Overview
+--------
+Global carbon markets reached a record trading volume of $950 billion in 2024,
+a 34% increase over 2023. The European Union Emissions Trading System (EU ETS)
+remains the world's largest carbon market, accounting for 45% of global volume.
+
+EU ETS Developments
+--------------------
+The EU ETS price averaged €68 per tonne of CO2 in 2024, up from €52 in 2023.
+The Market Stability Reserve (MSR) continued to withdraw allowances, tightening supply.
+Phase 4 (2021–2030) includes annual linear reduction factor of 2.2%.
+
+US Voluntary Carbon Market
+--------------------------
+The US voluntary carbon market grew to $210 billion in 2024.
+Nature-based solutions (reforestation, soil carbon) represent 38% of US voluntary credits.
+The Integrity Council for the Voluntary Carbon Market (ICVCM) issued new Core Carbon
+Principles in late 2024, raising quality standards for credit issuance.
+
+Emerging Markets
+----------------
+China's national ETS covered 8.5 billion tonnes of CO2 in 2024, making it the
+world's largest by volume, though price levels remain low at around ¥80/tonne (~$11).
+India launched its Carbon Credit Trading Scheme (CCTS) in early 2025, targeting
+energy-intensive industries including steel, cement, and aluminum.
+
+Key Policy Trends
+-----------------
+1. Carbon border adjustment mechanisms (CBAM) are being adopted beyond the EU.
+2. Article 6 of the Paris Agreement implementation is progressing, enabling
+   international transfers of carbon credits between countries.
+3. Corporate Science-Based Targets (SBTs) are driving increased demand for
+   high-quality carbon credits with strong co-benefits.
+
+Challenges
+----------
+- Additionality concerns remain for some offset project types.
+- Double-counting risks in Article 6 implementation require careful oversight.
+- Greenwashing allegations have led to increased scrutiny of corporate carbon claims.

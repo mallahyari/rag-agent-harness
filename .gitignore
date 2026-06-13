@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets
+.env
+
+# Corpus data
+corpus.lance/
+*.bm25
+
+# IDE / tooling
+.claude/
+.memsearch/
+
+# Misc
+hello.py
+uv.lock
