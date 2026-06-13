@@ -5,6 +5,10 @@ from abc import ABC, abstractmethod
 
 class BaseRenderer(ABC):
     @abstractmethod
+    async def on_llm_start(self) -> None:
+        """Called just before each LLM API call — shows a thinking indicator."""
+
+    @abstractmethod
     async def on_thinking(self, text: str) -> None:
         """Called when a thinking block arrives (Anthropic extended thinking)."""
 
@@ -19,6 +23,10 @@ class BaseRenderer(ABC):
     @abstractmethod
     async def on_tool_result(self, name: str, result: str, is_error: bool) -> None:
         """Called after the tool executes and returns a result."""
+
+    @abstractmethod
+    async def on_citation_retry(self, reason: str) -> None:
+        """Called when citation validation fails; `reason` is the correction message."""
 
     @abstractmethod
     async def on_answer_start(self) -> None:

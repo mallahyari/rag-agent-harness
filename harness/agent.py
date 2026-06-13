@@ -28,6 +28,7 @@ async def run(
     state.history.append({"role": "user", "content": question})
 
     for iteration in range(MAX_ITERATIONS):
+        await renderer.on_llm_start()
         stream = await stream_completion(
             messages=state.history,
             tools=TOOL_SCHEMAS,
@@ -86,6 +87,7 @@ async def run(
             if correction:
                 state.history.append({"role": "assistant", "content": full_text})
                 state.history.append({"role": "user", "content": correction})
+                await renderer.on_citation_retry(correction)
                 continue
             await renderer.on_done(full_text)
             return full_text
