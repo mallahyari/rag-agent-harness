@@ -25,3 +25,6 @@ hello.py
 uv.lock
 .DS_Store
 pdfs/
+
+# Chainlit generated config
+.chainlit/

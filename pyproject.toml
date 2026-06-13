@@ -9,19 +9,15 @@ dependencies = [
     # LLM
     "litellm>=1.40",
     "anthropic>=0.40",
-
     # Retrieval
     "lancedb>=0.12",
     "sentence-transformers>=3.0",
     "rank-bm25>=0.2",
-
     # Ingestion
     "langchain-text-splitters>=0.3",
-
     # UI
     "chainlit>=2.0",
     "rich>=13.0",
-
     # Utilities
     "python-dotenv>=1.0",
 ]
