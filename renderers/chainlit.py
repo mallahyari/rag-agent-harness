@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import chainlit as cl
+from chainlit.step import utc_now
 
 from .base import BaseRenderer
 
@@ -13,14 +14,15 @@ class ChainlitRenderer(BaseRenderer):
     iteration each receive their own result — otherwise only the last step
     would get an output and the rest would render empty.
 
-    The final answer is accumulated in memory and sent as ONE cl.Message in
-    on_done — after every tool step already exists. Because Chainlit orders the
-    timeline by each element's created_at, building the message last guarantees
-    it appears below all tool steps (tool calls first, answer below).
+    IMPORTANT: we set step.start / step.end manually. The Chainlit frontend
+    orders the timeline by these timestamps; the context-manager form
+    (__aenter__/__aexit__) sets them automatically, but we can't use it because
+    it nests every step under the previous one. Using send()/update() without
+    setting start/end leaves them None, which makes steps sort incorrectly
+    relative to the final answer message — the bug that put the answer on top.
 
-    Context managers (cl.Step.__aenter__/__aexit__) are deliberately avoided:
-    they set a contextvar that makes each new step a child of the previous one,
-    which caused runaway nesting. Explicit send()/update() keeps steps flat.
+    The final answer is accumulated and sent as ONE cl.Message in on_done, after
+    every step exists and with the latest timestamp, so it renders last.
     """
 
     def __init__(self) -> None:
@@ -36,12 +38,15 @@ class ChainlitRenderer(BaseRenderer):
 
     async def on_thinking(self, text: str) -> None:
         step = cl.Step(name="Thinking", type="llm")
+        step.start = utc_now()
         step.output = text
+        step.end = utc_now()
         await step.send()
         await step.update()
 
     async def on_tool_call_start(self, name: str, tool_id: str) -> None:
         step = cl.Step(name=name, type="tool", id=tool_id)
+        step.start = utc_now()
         await step.send()
         self._steps[tool_id] = step
 
@@ -58,6 +63,7 @@ class ChainlitRenderer(BaseRenderer):
         if step:
             step.output = result
             step.is_error = is_error
+            step.end = utc_now()
             await step.update()
 
     # ── answer events ────────────────────────────────────────────────────────
