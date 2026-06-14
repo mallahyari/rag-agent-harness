@@ -53,7 +53,8 @@ def _format_args(inputs: dict) -> str:
 def _result_summary(name: str, result: str) -> str:
     """One-line summary of a tool result for inline display."""
     if name == "list_collections":
-        lines = [ln.strip().lstrip("- ") for ln in result.splitlines() if ln.strip().startswith("  -")]
+        # Format is "Available collections:\n  - name\n  - name"
+        lines = [ln[4:] for ln in result.splitlines() if ln.startswith("  - ")]
         if lines:
             return f"{len(lines)} collection(s): {', '.join(lines)}"
         return result.strip()[:120]

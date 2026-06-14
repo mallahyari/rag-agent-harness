@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from transformers import logging as _hf_logging
+
+# Suppress "Loading weights: 100%" tqdm bars from huggingface/transformers
+_hf_logging.set_verbosity_error()
+_hf_logging.disable_progress_bar()
 
 _embed_model: SentenceTransformer | None = None
 _rerank_model: CrossEncoder | None = None
