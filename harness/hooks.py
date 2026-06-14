@@ -22,7 +22,9 @@ def pre_hook(tool_name: str, args: dict, state: SessionState) -> dict:
 
 def post_hook(tool_name: str, result: str, is_error: bool, state: SessionState) -> str:
     if tool_name == "search_documents" and not is_error:
-        ids = re.findall(r'\[([^\]]+)\]', result)
+        # Match only the chunk-ID header lines: "[chunk_id] (doc: …)" — not bracket
+        # patterns inside document text (e.g. [1], [Smith 2023], [Table 3]).
+        ids = re.findall(r'^\[([^\]]+)\] \(doc:', result, re.MULTILINE)
         state.retrieved_chunk_ids.update(ids)
 
         if "(no results found)" in result:
@@ -33,8 +35,8 @@ def post_hook(tool_name: str, result: str, is_error: bool, state: SessionState) 
 
     if tool_name == "get_context" and not is_error:
         state.retrieved_token_count += len(result) // 4
-        # Track chunk IDs returned by get_context so citation validator accepts them
-        ids = re.findall(r'\[([^\]]+)\]', result)
+        # get_context format: "[chunk_id]\ntext" — match IDs on their own line
+        ids = re.findall(r'^\[([^\]]+)\]$', result, re.MULTILINE)
         state.retrieved_chunk_ids.update(ids)
 
     return result
@@ -47,24 +49,42 @@ _NO_INFO_PHRASES = (
 )
 
 
+def _parse_cited_ids(answer: str) -> set[str]:
+    """Extract citation IDs from an answer, normalising [id1, id2] multi-cites."""
+    raw = re.findall(r'\[([^\]]+)\]', answer)
+    result: set[str] = set()
+    for item in raw:
+        # Split comma/semicolon-separated multi-cites into individual IDs
+        for part in re.split(r'[,;]\s*', item):
+            part = part.strip()
+            if part:
+                result.add(part)
+    return result
+
+
 def validate_citation(answer: str, retrieved_ids: set[str]) -> str | None:
-    cited = set(re.findall(r'\[([^\]]+)\]', answer))
+    cited = _parse_cited_ids(answer)
 
     # If the model explicitly says it couldn't find info, no citations required
     if not cited:
         lower = answer.lower()
         if any(p in lower for p in _NO_INFO_PHRASES) or not retrieved_ids:
             return None
+        valid_sample = ", ".join(sorted(retrieved_ids)[:6])
         return (
-            "Your answer has no citations. Add [chunk_id] references "
-            "for each factual claim using the IDs from search results."
+            "Your answer has no citations. For every factual claim add the chunk_id "
+            "in square brackets immediately after it, e.g. [chunk_id]. "
+            f"Valid chunk IDs from your search results: {valid_sample}"
         )
 
     # Only reject hallucinated IDs — ones not in any retrieved result
     unknown = cited - retrieved_ids
     if unknown:
+        bad = ", ".join(sorted(unknown))
+        good = ", ".join(sorted(retrieved_ids)[:6])
         return (
-            f"You cited {unknown} which were not in your retrieved results. "
-            "Only cite chunks you actually retrieved."
+            f"Citation error: {bad} — those IDs were not in your retrieved results. "
+            f"Valid chunk IDs you can cite: {good}. "
+            "Put each chunk ID in its own square brackets: [chunk_id1] [chunk_id2]."
         )
     return None

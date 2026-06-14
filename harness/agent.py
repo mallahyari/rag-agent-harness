@@ -9,7 +9,8 @@ from .state import SessionState
 from .tools import TOOL_SCHEMAS, dispatch_tool
 from renderers.base import BaseRenderer
 
-MAX_ITERATIONS = 10
+MAX_ITERATIONS = 10       # max tool-call round-trips
+MAX_CITATION_RETRIES = 3  # max times to ask model to fix its citations
 
 
 def _clean_tool_id(tid: str) -> str:
@@ -27,6 +28,7 @@ async def run(
 ) -> str:
     state.history.append({"role": "user", "content": question})
 
+    citation_retries = 0
     for iteration in range(MAX_ITERATIONS):
         await renderer.on_llm_start()
         stream = await stream_completion(
@@ -84,7 +86,8 @@ async def run(
 
         if finish_reason == "stop" or (finish_reason is None and not tool_calls):
             correction = validate_citation(full_text, state.retrieved_chunk_ids)
-            if correction:
+            if correction and citation_retries < MAX_CITATION_RETRIES:
+                citation_retries += 1
                 state.history.append({"role": "assistant", "content": full_text})
                 state.history.append({"role": "user", "content": correction})
                 await renderer.on_citation_retry(correction)
