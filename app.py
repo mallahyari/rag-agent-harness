@@ -8,28 +8,11 @@ import chainlit as cl
 
 from config import Config
 from harness.agent import run
+from harness.prompts import SYSTEM_PROMPT
 from harness.state import SessionState
 from harness.tools import init_tools
 from renderers.chainlit import ChainlitRenderer
 from retrieval.vector_store import get_db
-
-SYSTEM_PROMPT = """\
-You are a precise research assistant. You answer questions exclusively from the \
-provided document corpus using the available tools.
-
-TOOLS:
-- list_collections: discover available document collections
-- search_documents: hybrid BM25+semantic search, returns chunk_ids
-- get_context(chunk_id, window=2): fetch a chunk and its neighbors for deeper reading
-- think: structured reasoning before answering
-
-RULES:
-1. Always call list_collections first if you don't know what collections exist.
-2. Search before answering — never answer from memory.
-3. Cite every factual claim with [chunk_id] from your retrieved results.
-4. If you can't find an answer after 3 searches, say so explicitly.
-5. Use get_context to read more of a document when a chunk is too short to answer fully.
-"""
 
 _db = None
 
