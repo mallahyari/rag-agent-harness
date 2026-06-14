@@ -8,6 +8,7 @@ An agentic retrieval-augmented generation (RAG) system that reasons over unstruc
 - **Cross-encoder reranking** — `ms-marco-MiniLM` reranks candidates before the LLM sees them
 - **Streaming ReAct loop** — tool calls and answer tokens stream to the UI in real time
 - **Multi-provider** — swap between Anthropic, OpenAI, and Gemini with one flag
+- **PDF + text ingestion** — `.txt`, `.md`, and `.pdf` (parsed locally via `liteparse`, no API key)
 - **Context budget** — hard cap on retrieved tokens prevents prompt overflow
 - **Citation validator** — post-hook rejects hallucinated chunk IDs before the answer reaches the user
 - **Two UIs** — Rich terminal (default) and Chainlit browser UI
@@ -21,20 +22,20 @@ flowchart TD
     User(["User Question"])
 
     subgraph Entrypoints
-        main["main.py\nTerminal REPL"]
-        app["app.py\nChainlit"]
+        main["main.py<br/>Terminal REPL"]
+        app["app.py<br/>Chainlit"]
     end
 
     subgraph Renderers
-        TR["TerminalRenderer\n(Rich panels)"]
-        CR["ChainlitRenderer\n(Steps + stream)"]
+        TR["TerminalRenderer<br/>(Rich panels)"]
+        CR["ChainlitRenderer<br/>(Steps + stream)"]
     end
 
     subgraph AgentHarness["Agent Harness · harness/"]
-        agent["agent.py\nStreaming ReAct loop"]
-        hooks["hooks.py\nPre/post middleware\nCitation validator\nContext budget"]
-        state["state.py\nSession history\nRetrieved chunk IDs\nToken count"]
-        providers["providers.py\nLiteLLM wrapper"]
+        agent["agent.py<br/>Streaming ReAct loop"]
+        hooks["hooks.py<br/>Pre/post middleware<br/>Citation validator<br/>Context budget"]
+        state["state.py<br/>Session history<br/>Retrieved chunk IDs<br/>Token count"]
+        providers["providers.py<br/>LiteLLM wrapper"]
     end
 
     subgraph ToolRegistry["Tool Registry · harness/tools.py"]
@@ -45,19 +46,19 @@ flowchart TD
     end
 
     subgraph RetrievalPipeline["Retrieval Pipeline · retrieval/"]
-        search["search.py\nhybrid_search · rerank · format"]
-        vs["vector_store.py\nLanceDB"]
-        bm25["bm25.py\nBM25Okapi index"]
-        emb["embeddings.py\nSentenceTransformer\nCrossEncoder"]
+        search["search.py<br/>hybrid_search · rerank · format"]
+        vs["vector_store.py<br/>LanceDB"]
+        bm25["bm25.py<br/>BM25Okapi index"]
+        emb["embeddings.py<br/>SentenceTransformer<br/>CrossEncoder"]
     end
 
     subgraph IngestionPipeline["Ingestion Pipeline · ingestion/"]
-        chunker["chunker.py\nRecursive text split"]
-        pipeline["pipeline.py\nchunk → embed → index"]
-        ingest["ingest.py\nCLI entrypoint"]
+        chunker["chunker.py<br/>Recursive text split"]
+        pipeline["pipeline.py<br/>chunk → embed → index"]
+        ingest["ingest.py<br/>CLI entrypoint"]
     end
 
-    Docs[("Documents\n.txt / .pdf / …")]
+    Docs[("Documents<br/>.txt / .pdf / …")]
 
     User --> main & app
     main --> TR --> agent
@@ -125,8 +126,10 @@ rag-agent-harness/
 
 ```bash
 uv venv
-uv pip install litellm anthropic lancedb sentence-transformers rank-bm25 \
-               langchain-text-splitters rich python-dotenv
+uv pip install -e .          # installs everything in pyproject.toml
+
+# Optional: PDF ingestion support (parsed locally, no API key)
+uv pip install liteparse
 ```
 
 ### 2. Configure API keys
@@ -174,12 +177,12 @@ chainlit run app.py
 
 | Key | Model | Notes |
 |---|---|---|
-| `anthropic-fast` | claude-haiku-4-5 | Default — fast and cheap |
+| `gemini-fast` | gemini-2.5-flash | **Default** — fast and cheap |
+| `gemini-smart` | gemini-2.5-pro | |
+| `anthropic-fast` | claude-haiku-4-5 | |
 | `anthropic-smart` | claude-sonnet-4-6 | Extended thinking enabled |
 | `openai-fast` | gpt-4o-mini | |
 | `openai-smart` | gpt-4o | |
-| `gemini-fast` | gemini-2.0-flash | |
-| `gemini-smart` | gemini-2.5-pro | |
 
 ---
 
@@ -210,7 +213,7 @@ Key settings in `config.py`:
 
 | Setting | Default | Description |
 |---|---|---|
-| `provider` | `anthropic-fast` | LLM provider key |
+| `provider` | `gemini-fast` | LLM provider key |
 | `search_k` | `10` | Candidates before reranking |
 | `rerank_top_k` | `5` | Results after reranking |
 | `context_window_size` | `2` | Neighbor chunks in `get_context` |
