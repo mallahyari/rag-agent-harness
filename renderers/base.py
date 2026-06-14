@@ -21,7 +21,9 @@ class BaseRenderer(ABC):
         """Called when the tool call input is fully streamed."""
 
     @abstractmethod
-    async def on_tool_result(self, name: str, result: str, is_error: bool) -> None:
+    async def on_tool_result(
+        self, tool_id: str, name: str, result: str, is_error: bool
+    ) -> None:
         """Called after the tool executes and returns a result."""
 
     @abstractmethod

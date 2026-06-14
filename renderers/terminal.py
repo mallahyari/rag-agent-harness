@@ -126,7 +126,9 @@ class TerminalRenderer(BaseRenderer):
             line += f"  [tool.args]{args_str}[/tool.args]"
         self.console.print(line)
 
-    async def on_tool_result(self, name: str, result: str, is_error: bool) -> None:
+    async def on_tool_result(
+        self, _tool_id: str, name: str, result: str, is_error: bool
+    ) -> None:
         if is_error:
             preview = result[:200] + ("…" if len(result) > 200 else "")
             self.console.print(f"  [tool.err]✗ {preview}[/tool.err]")

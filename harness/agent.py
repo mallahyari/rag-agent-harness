@@ -133,7 +133,7 @@ async def run(
                     result, is_error = str(e), True
 
                 result = post_hook(tc["name"], result, is_error, state)
-                await renderer.on_tool_result(tc["name"], result, is_error)
+                await renderer.on_tool_result(tid, tc["name"], result, is_error)
 
                 tool_results.append({
                     "role": "tool",
