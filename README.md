@@ -205,6 +205,8 @@ chainlit run app.py
 4. **Context expansion** — The agent can call `get_context` to retrieve neighboring chunks around a promising result.
 5. **Answer** — Once the agent has enough evidence it writes a final answer. A post-hook validates that every `[chunk_id]` citation was actually retrieved; hallucinated IDs trigger a revision loop.
 
+> For a detailed, code-linked walkthrough of both the ingestion and answering pipelines, see **[PIPELINE.md](PIPELINE.md)**.
+
 ---
 
 ## Configuration
