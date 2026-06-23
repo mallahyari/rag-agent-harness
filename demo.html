@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agentic RAG — A User Story</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c2330;
+    --border: #2d333b;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --amber: #d29922;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+    --cyan: #56d4dd;
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.hero { text-align: center; padding: 24px 0 8px; }
+  header.hero h1 { font-size: 2.1rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+  header.hero h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--purple), var(--pink));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header.hero p { color: var(--muted); max-width: 680px; margin: 0 auto; font-size: 1.02rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center; margin: 22px 0 8px; font-size: 0.82rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .controls { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 18px 0 28px; flex-wrap: wrap; }
+  button {
+    font-family: var(--sans); font-size: 0.92rem; font-weight: 600;
+    color: var(--text); background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 18px; cursor: pointer; transition: all .15s;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #06111f; border-color: var(--accent); }
+  button.primary:hover { filter: brightness(1.1); color: #06111f; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .speed { color: var(--muted); font-size: 0.82rem; }
+
+  .stage { display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .stage { grid-template-columns: 1fr; } }
+
+  .feed { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 8px 8px 16px; min-height: 520px; }
+  .feed-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; }
+  .feed-head .traffic { display: flex; gap: 6px; }
+  .feed-head .traffic i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .feed-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  .step { opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; }
+  .step.show { opacity: 1; transform: none; }
+
+  /* user bubble */
+  .user-msg { align-self: flex-end; max-width: 85%; background: #21364e; border: 1px solid #335577; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 4px 14px; }
+  .user-tag { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+
+  /* tool / think cards */
+  .card { border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); overflow: hidden; }
+  .card .c-head { display: flex; align-items: center; gap: 9px; padding: 9px 13px; font-size: 0.86rem; font-weight: 600; }
+  .card .c-head .ico { font-size: 1rem; }
+  .card .c-head .badge { margin-left: auto; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 20px; color: var(--muted); border: 1px solid var(--border); }
+  .card .c-body { padding: 0 13px 12px; font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+  .card .c-body pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
+  .kv { color: var(--cyan); }
+  .str { color: var(--green); }
+  .result-line { color: var(--green); padding-top: 8px; display: flex; gap: 7px; align-items: baseline; }
+  .result-line .arrow { color: var(--border); }
+
+  .think .c-head { color: var(--purple); }
+  .think .c-body { color: #cdb8ff; font-family: var(--sans); font-style: italic; font-size: 0.86rem; }
+  .tool-search .c-head { color: var(--accent); }
+  .tool-list .c-head { color: var(--cyan); }
+  .tool-ctx .c-head { color: var(--amber); }
+  .validate .c-head { color: var(--green); }
+  .validate.fail .c-head { color: var(--pink); }
+
+  /* answer */
+  .answer { border: 1px solid #294436; background: linear-gradient(180deg, #11261c, #0f1f18); border-radius: 12px; padding: 4px 16px 16px; }
+  .answer .a-head { display: flex; align-items: center; gap: 8px; color: var(--green); font-weight: 700; padding: 12px 0 8px; border-bottom: 1px solid #234; margin-bottom: 10px; }
+  .answer h4 { margin: 14px 0 4px; font-size: 0.95rem; color: var(--text); }
+  .answer p { margin: 6px 0; font-size: 0.92rem; }
+  .cite { color: var(--accent); font-family: var(--mono); font-size: 0.78rem; background: #16273d; padding: 1px 5px; border-radius: 4px; border: 1px solid #25405f; white-space: nowrap; }
+  .cursor { display: inline-block; width: 7px; height: 1.05em; background: var(--green); vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+
+  /* annotation rail */
+  .rail { position: sticky; top: 20px; }
+  .note { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; opacity: .35; transition: opacity .3s, border-color .3s, transform .3s; }
+  .note.active { opacity: 1; border-left-color: var(--accent); transform: translateX(2px); }
+  .note .n-step { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 4px; }
+  .note h3 { margin: 0 0 6px; font-size: 0.98rem; }
+  .note p { margin: 0; font-size: 0.86rem; color: var(--muted); }
+  .note .why { color: var(--amber); font-weight: 600; }
+
+  .pipeline { margin-top: 30px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; }
+  .pipeline h2 { margin: 0 0 14px; font-size: 1.1rem; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.8rem; }
+  .flow .node { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 11px; }
+  .flow .sep { color: var(--accent); font-weight: 700; }
+  .loop-note { color: var(--muted); font-size: 0.82rem; margin-top: 12px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 34px; }
+  code.inline { font-family: var(--mono); background: var(--panel-2); padding: 1px 6px; border-radius: 5px; color: var(--cyan); font-size: 0.84em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Agentic <span class="grad">RAG</span> — A User Story</h1>
+    <p>How an AI agent answers a question over a private document corpus: not one retrieval, but a
+       reasoning loop that decides <em>when</em> to search, <em>what</em> to search for, when to dig
+       deeper, and refuses to answer without verifiable citations.</p>
+  </header>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--purple)"></i> reasoning (think)</span>
+    <span><i class="dot" style="background:var(--cyan)"></i> list collections</span>
+    <span><i class="dot" style="background:var(--accent)"></i> search (hybrid + rerank)</span>
+    <span><i class="dot" style="background:var(--amber)"></i> get context</span>
+    <span><i class="dot" style="background:var(--green)"></i> validate &amp; answer</span>
+  </div>
+
+  <div class="controls">
+    <button id="play" class="primary">▶ Play walkthrough</button>
+    <button id="step">Step ▸</button>
+    <button id="reset">↻ Reset</button>
+    <span class="speed">
+      Speed
+      <select id="speed" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;">
+        <option value="1600">Normal</option>
+        <option value="900">Fast</option>
+        <option value="2600">Slow</option>
+      </select>
+    </span>
+  </div>
+
+  <div class="stage">
+    <!-- LEFT: animated agent feed -->
+    <div class="feed">
+      <div class="feed-head">
+        <span class="traffic"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></span>
+        <span>rag-agent · research corpus (11 papers, 2,156 chunks)</span>
+      </div>
+      <div class="feed-body" id="feed"></div>
+    </div>
+
+    <!-- RIGHT: annotations -->
+    <div class="rail" id="rail"></div>
+  </div>
+
+  <div class="pipeline">
+    <h2>The loop under the hood</h2>
+    <div class="flow">
+      <span class="node">User question</span><span class="sep">→</span>
+      <span class="node">LLM decides next action</span><span class="sep">→</span>
+      <span class="node">tool call</span><span class="sep">→</span>
+      <span class="node">result fed back</span><span class="sep">↺</span>
+      <span class="node">(repeat ≤ 10×)</span><span class="sep">→</span>
+      <span class="node">validate citations</span><span class="sep">→</span>
+      <span class="node" style="border-color:var(--green);color:var(--green)">answer</span>
+    </div>
+    <p class="loop-note">
+      This is a <strong>ReAct loop</strong>: the model alternates <em>reasoning</em> and <em>acting</em>. Unlike
+      naive RAG — which retrieves <em>once</em> and stuffs the results into the prompt — the agent runs as many
+      retrieval rounds as the question needs, rewrites its own queries, and pulls extra context only when a
+      chunk is too thin to answer from. Every tool runs <strong>sequentially</strong>; results from one search
+      inform the next decision.
+    </p>
+  </div>
+
+  <footer>
+    Built on the RAG Agent Harness · LiteLLM · LanceDB · BM25 + cross-encoder reranking · citation-validated answers
+  </footer>
+</div>
+
+<script>
+/* ---- The scripted user story (accurate to the harness flow) ---- */
+const STEPS = [
+  {
+    type: "user",
+    html: `<div class="user-tag">User</div>what is gnn-llm and what is query rewriting?`,
+    note: {
+      tag: "The question",
+      title: "A multi-part question",
+      body: `Two distinct concepts in one query. A single similarity search would blend them and likely
+             miss one. An agent can <span class="why">decompose</span> the problem and search for each piece.`
+    }
+  },
+  {
+    type: "think",
+    title: "think", badge: "reasoning",
+    body: `This asks about two separate topics. I'll first see what collections exist, then search the
+           corpus once per concept, rewriting each query to maximise recall before I answer.`,
+    note: {
+      tag: "Step 1 · Plan",
+      title: "The agent reasons first",
+      body: `Before touching the data, the model writes a plan with the <code class="inline">think</code> tool.
+             <span class="why">Why it matters:</span> explicit planning turns a vague prompt into a concrete,
+             multi-step retrieval strategy.`
+    }
+  },
+  {
+    type: "tool", cls: "tool-list", ico: "📋",
+    title: "list_collections", badge: "tool",
+    args: ``,
+    result: `1 collection: research`,
+    note: {
+      tag: "Step 2 · Discover",
+      title: "What can I even search?",
+      body: `The agent never assumes the data layout — it asks. <span class="why">Why it matters:</span>
+             the same agent works on any corpus; it adapts to whatever collections are present.`
+    }
+  },
+  {
+    type: "tool", cls: "tool-search", ico: "🔍",
+    title: "search_documents", badge: "hybrid + rerank",
+    args: `{ <span class="kv">"query"</span>: <span class="str">"GNN-LLM graph neural network reasoning"</span>,\n  <span class="kv">"collection"</span>: <span class="str">"research"</span>, <span class="kv">"k"</span>: 5 }`,
+    result: `5 chunks retrieved`,
+    note: {
+      tag: "Step 3 · Search (concept 1)",
+      title: "Hybrid retrieval, then rerank",
+      body: `BM25 (keywords) + semantic (meaning) scores are fused with RRF, then a cross-encoder reranks the
+             top candidates. <span class="why">Why it matters:</span> catches both exact terms like "GNN" and
+             paraphrases the user never typed.`
+    }
+  },
+  {
+    type: "tool", cls: "tool-search", ico: "🔍",
+    title: "search_documents", badge: "query rewrite",
+    args: `{ <span class="kv">"query"</span>: <span class="str">"query rewriting for retrieval-augmented LLMs"</span>,\n  <span class="kv">"collection"</span>: <span class="str">"research"</span>, <span class="kv">"k"</span>: 5 }`,
+    result: `5 chunks retrieved`,
+    note: {
+      tag: "Step 4 · Search (concept 2)",
+      title: "A second, rewritten search",
+      body: `Naive RAG stops at one search. The agent issues a <span class="why">separate, reworded query</span>
+             for the second concept — covering the part of the question the first search ignored.`
+    }
+  },
+  {
+    type: "tool", cls: "tool-ctx", ico: "📄",
+    title: "get_context", badge: "expand",
+    args: `{ <span class="kv">"chunk_id"</span>: <span class="str">"GNN-RAG…__c0007"</span>,\n  <span class="kv">"collection"</span>: <span class="str">"research"</span>, <span class="kv">"window"</span>: 2 }`,
+    result: `chunk c0005 + c0006 + c0007 + c0008 + c0009`,
+    note: {
+      tag: "Step 5 · Dig deeper",
+      title: "Read around the best hit",
+      body: `One promising chunk was too short to fully define GNN-RAG, so the agent pulls its neighbouring
+             chunks. <span class="why">Why it matters:</span> it reads more <em>only where needed</em>,
+             instead of dumping whole documents into the prompt.`
+    }
+  },
+  {
+    type: "validate", cls: "validate", ico: "✓",
+    title: "citation check", badge: "post-hook",
+    body: `Every <code class="inline">[chunk_id]</code> in the draft answer matched a chunk that was actually
+           retrieved. ✓ No hallucinated sources.`,
+    note: {
+      tag: "Step 6 · Verify",
+      title: "Refuse to hallucinate",
+      body: `A post-hook scans the draft: if it cites a chunk ID that was never retrieved, the answer is
+             rejected and the model must revise. <span class="why">Why it matters:</span> citations are
+             guaranteed to be traceable to real source text.`
+    }
+  },
+  {
+    type: "answer",
+    note: {
+      tag: "Step 7 · Answer",
+      title: "Synthesised, with receipts",
+      body: `Both concepts are explained and every claim carries a citation back to the corpus.
+             <span class="why">The payoff:</span> a grounded, auditable answer — not a confident guess.`
+    }
+  }
+];
+
+const ANSWER_HTML = `
+  <div class="a-head">✦ Answer</div>
+  <p><strong>GNN-LLM</strong> refers to frameworks that combine <strong>Graph Neural Networks</strong> with
+  <strong>Large Language Models</strong> to improve reasoning over structured/graph data. In the GNN-RAG
+  approach, a GNN retrieves relevant subgraphs from a knowledge graph, which the LLM then verbalises and
+  reasons over — pairing the GNN's structural retrieval with the LLM's language ability
+  <span class="cite">[GNN-RAG…__c0007]</span> <span class="cite">[GNN-RAG…__c0005]</span>.</p>
+  <p><strong>Query rewriting</strong> is a technique where an LLM rewrites the user's original query
+  <em>before</em> retrieval to improve results — the "Rewrite-Retrieve-Read" pattern. It addresses queries
+  that underperform due to poor phrasing or missing context, and can rephrase from multiple semantic
+  viewpoints to make retrieval more robust
+  <span class="cite">[Query_Rewriting…__c0039]</span> <span class="cite">[Searching_for_Best…__c0082]</span>.</p>
+  <p style="color:var(--muted);font-size:0.84rem;margin-top:10px;">
+  In short: <strong>GNN-LLM</strong> fuses graph retrieval with language reasoning, while
+  <strong>query rewriting</strong> reshapes the question itself to retrieve better evidence.</p>
+`;
+
+/* ---- Rendering / animation engine ---- */
+const feed = document.getElementById("feed");
+const rail = document.getElementById("rail");
+let idx = 0, playing = false, timer = null;
+
+// Pre-build annotation rail
+STEPS.forEach((s, i) => {
+  const n = document.createElement("div");
+  n.className = "note"; n.id = "note-" + i;
+  n.innerHTML = `<div class="n-step">${s.note.tag}</div><h3>${s.note.title}</h3><p>${s.note.body}</p>`;
+  rail.appendChild(n);
+});
+
+function buildStep(s) {
+  const el = document.createElement("div");
+  el.className = "step";
+  if (s.type === "user") {
+    el.innerHTML = `<div class="user-msg">${s.html}</div>`;
+  } else if (s.type === "think") {
+    el.innerHTML = `<div class="card think">
+      <div class="c-head"><span class="ico">💭</span>${s.title}<span class="badge">${s.badge}</span></div>
+      <div class="c-body">${s.body}</div></div>`;
+  } else if (s.type === "tool") {
+    const argsBlock = s.args ? `<pre>${s.args}</pre>` : `<pre style="color:var(--border)">{ }</pre>`;
+    el.innerHTML = `<div class="card ${s.cls}">
+      <div class="c-head"><span class="ico">${s.ico}</span>${s.title}<span class="badge">${s.badge}</span></div>
+      <div class="c-body">${argsBlock}
+        <div class="result-line"><span class="arrow">└─</span><span>${s.result}</span></div>
+      </div></div>`;
+  } else if (s.type === "validate") {
+    el.innerHTML = `<div class="card ${s.cls}">
+      <div class="c-head"><span class="ico">${s.ico}</span>${s.title}<span class="badge">${s.badge}</span></div>
+      <div class="c-body" style="color:var(--green);font-family:var(--sans)">${s.body}</div></div>`;
+  } else if (s.type === "answer") {
+    el.innerHTML = `<div class="answer">${ANSWER_HTML}</div>`;
+  }
+  return el;
+}
+
+function highlightNote(i) {
+  document.querySelectorAll(".note").forEach(n => n.classList.remove("active"));
+  const active = document.getElementById("note-" + i);
+  if (active) active.classList.add("active");
+}
+
+function advance() {
+  if (idx >= STEPS.length) { stop(); return; }
+  const s = STEPS[idx];
+  const el = buildStep(s);
+  feed.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  highlightNote(idx);
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  idx++;
+  updateButtons();
+}
+
+function updateButtons() {
+  document.getElementById("step").disabled = idx >= STEPS.length;
+}
+
+function play() {
+  if (idx >= STEPS.length) reset();
+  playing = true;
+  document.getElementById("play").textContent = "⏸ Pause";
+  const tick = () => {
+    if (!playing) return;
+    advance();
+    if (idx < STEPS.length) {
+      timer = setTimeout(tick, parseInt(document.getElementById("speed").value, 10));
+    } else { stop(); }
+  };
+  tick();
+}
+
+function stop() {
+  playing = false;
+  clearTimeout(timer);
+  document.getElementById("play").textContent = idx >= STEPS.length ? "▶ Replay" : "▶ Play walkthrough";
+}
+
+function reset() {
+  stop(); idx = 0; feed.innerHTML = "";
+  document.querySelectorAll(".note").forEach(n => n.classList.remove("active"));
+  document.getElementById("play").textContent = "▶ Play walkthrough";
+  updateButtons();
+}
+
+document.getElementById("play").addEventListener("click", () => playing ? stop() : play());
+document.getElementById("step").addEventListener("click", () => { stop(); advance(); });
+document.getElementById("reset").addEventListener("click", reset);
+
+updateButtons();
+</script>
+</body>
+</html>
